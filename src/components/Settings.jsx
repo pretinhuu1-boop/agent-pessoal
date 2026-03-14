@@ -1,0 +1,210 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { X, Key, Eye, EyeOff, Check, Trash2, Download, FileJson, FileSpreadsheet, FileText } from 'lucide-react';
+import { getApiKey, setApiKey, clearChatHistory } from '../services/chatService';
+import { exportJSON, exportCSV, exportReport } from '../services/exportService';
+import { getUserName, setUserName } from '../store/useStore';
+
+export default function Settings({ onClose, ideas = [], onNameChange }) {
+  const [key, setKey] = useState(getApiKey());
+  const [showKey, setShowKey] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [cleared, setCleared] = useState(false);
+  const [exported, setExported] = useState(null);
+  const [name, setName] = useState(getUserName());
+  const [nameSaved, setNameSaved] = useState(false);
+
+  const handleSave = () => {
+    setApiKey(key.trim());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleClearChat = () => {
+    clearChatHistory();
+    setCleared(true);
+    setTimeout(() => setCleared(false), 2000);
+  };
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 z-50"
+      />
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+        className="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto"
+      >
+        <div className="bg-surface-elevated rounded-t-[20px] border-t border-x border-border">
+          <div className="flex justify-center pt-2 pb-1">
+            <div className="w-9 h-[4px] rounded-full bg-white/12" />
+          </div>
+
+          <div className="flex items-center justify-between px-4 pb-3">
+            <span className="text-[15px] font-semibold text-text-primary">Configuracoes</span>
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-white/8 text-text-secondary press-scale">
+              <X size={14} />
+            </button>
+          </div>
+
+          <div className="px-4 pb-6 space-y-4" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 20px), 20px)' }}>
+            {/* User Name */}
+            <div>
+              <label className="text-[11px] text-text-secondary mb-1.5 block font-medium uppercase tracking-wider">
+                Seu nome
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Ex: Netto"
+                  className="flex-1 bg-white/4 border border-border rounded-xl py-2.5 px-3 text-[14px] text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/30 transition-colors"
+                />
+                <button
+                  onClick={() => {
+                    const trimmed = name.trim() || 'Netto';
+                    setUserName(trimmed);
+                    setName(trimmed);
+                    if (onNameChange) onNameChange(trimmed);
+                    setNameSaved(true);
+                    setTimeout(() => setNameSaved(false), 2000);
+                  }}
+                  className={`px-4 rounded-xl text-[13px] font-medium transition-all duration-200 press-scale ${
+                    nameSaved
+                      ? 'bg-status-done/15 text-status-done'
+                      : 'bg-accent/10 text-accent'
+                  }`}
+                >
+                  {nameSaved ? <Check size={15} /> : 'Salvar'}
+                </button>
+              </div>
+              <p className="text-[10px] text-text-tertiary mt-1.5">
+                O app vai te chamar por esse nome. Aparece como "Agente {name || 'Netto'}".
+              </p>
+            </div>
+
+            {/* API Key */}
+            <div>
+              <label className="text-[11px] text-text-secondary mb-1.5 block font-medium uppercase tracking-wider">
+                <Key size={10} className="inline mr-1" />
+                Chave da API (Anthropic)
+              </label>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    value={key}
+                    onChange={e => setKey(e.target.value)}
+                    placeholder="sk-ant-..."
+                    className="w-full bg-white/4 border border-border rounded-xl py-2.5 px-3 pr-10 text-[14px] text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/30 font-mono transition-colors"
+                  />
+                  <button
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+                  >
+                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                <button
+                  onClick={handleSave}
+                  className={`px-4 rounded-xl text-[13px] font-medium transition-all duration-200 press-scale ${
+                    saved
+                      ? 'bg-status-done/15 text-status-done'
+                      : 'bg-accent/10 text-accent'
+                  }`}
+                >
+                  {saved ? <Check size={15} /> : 'Salvar'}
+                </button>
+              </div>
+              <p className="text-[10px] text-text-tertiary mt-1.5 leading-relaxed">
+                Sua chave fica armazenada localmente. Nunca e enviada para servidores externos alem da API da Anthropic.
+              </p>
+            </div>
+
+            {/* Model Info */}
+            <div className="bg-white/3 rounded-xl border border-border p-3">
+              <div className="text-[11px] text-text-secondary font-medium uppercase tracking-wider mb-0.5">
+                Modelo
+              </div>
+              <div className="text-[14px] text-text-primary font-medium">Claude Haiku 4.5</div>
+              <div className="text-[10px] text-text-tertiary mt-0.5">
+                Rapido e economico — ideal para chat interativo
+              </div>
+            </div>
+
+            {/* Export Ideas */}
+            {ideas.length > 0 && (
+              <div>
+                <label className="text-[11px] text-text-secondary mb-2 block font-medium uppercase tracking-wider">
+                  <Download size={10} className="inline mr-1" />
+                  Exportar ideias ({ideas.length})
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'json', label: 'JSON', sublabel: 'Backup', icon: FileJson, color: '#0a84ff', fn: exportJSON },
+                    { id: 'csv', label: 'CSV', sublabel: 'Planilha', icon: FileSpreadsheet, color: '#30d158', fn: exportCSV },
+                    { id: 'html', label: 'Relatorio', sublabel: 'Visual', icon: FileText, color: '#d4a243', fn: exportReport },
+                  ].map(opt => {
+                    const Icon = opt.icon;
+                    const isExported = exported === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          opt.fn(ideas);
+                          setExported(opt.id);
+                          setTimeout(() => setExported(null), 2500);
+                        }}
+                        className={`flex flex-col items-center gap-1 py-3 rounded-xl border transition-all duration-200 press-scale ${
+                          isExported
+                            ? 'border-status-done/30 bg-status-done/8'
+                            : 'border-border bg-white/3 hover:bg-white/5'
+                        }`}
+                      >
+                        {isExported ? (
+                          <Check size={18} className="text-status-done" />
+                        ) : (
+                          <Icon size={18} style={{ color: opt.color }} />
+                        )}
+                        <span className={`text-[12px] font-medium ${isExported ? 'text-status-done' : 'text-text-primary'}`}>
+                          {isExported ? 'Baixado!' : opt.label}
+                        </span>
+                        {!isExported && (
+                          <span className="text-[9px] text-text-tertiary">{opt.sublabel}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Clear Chat */}
+            <button
+              onClick={handleClearChat}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 text-[13px] rounded-xl border transition-all duration-200 press-scale ${
+                cleared
+                  ? 'border-status-done/20 bg-status-done/8 text-status-done'
+                  : 'border-danger/10 bg-danger/5 text-danger'
+              }`}
+            >
+              {cleared ? (
+                <><Check size={14} /> Historico limpo</>
+              ) : (
+                <><Trash2 size={14} /> Limpar historico do chat</>
+              )}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  );
+}

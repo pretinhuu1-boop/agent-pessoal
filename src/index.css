@@ -1,0 +1,264 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #08080a;
+  --color-surface-elevated: #141416;
+  --color-surface-glass: rgba(20, 20, 22, 0.82);
+  --color-surface-hover: #1e1e22;
+  --color-surface-input: #1a1a1e;
+  --color-surface-card: #121214;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-bright: rgba(255, 255, 255, 0.12);
+  --color-text-primary: #f5f5f7;
+  --color-text-secondary: #8e8e93;
+  --color-text-tertiary: #48484a;
+  --color-accent: #d4a243;
+  --color-accent-soft: rgba(212, 162, 67, 0.10);
+  --color-accent-glow: rgba(212, 162, 67, 0.25);
+  --color-status-idea: #bf5af2;
+  --color-status-progress: #0a84ff;
+  --color-status-done: #30d158;
+  --color-status-paused: #636366;
+  --color-danger: #ff453a;
+
+  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'SF Mono', ui-monospace, monospace;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100dvh;
+  max-width: 430px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ─── Desktop Layout ─── */
+@media (min-width: 1024px) {
+  #root {
+    max-width: 100%;
+    margin: 0;
+  }
+}
+
+/* Sidebar — macOS-style translucent sidebar */
+.desktop-sidebar {
+  background: rgba(20, 20, 22, 0.72);
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.desktop-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.desktop-sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary);
+}
+.desktop-sidebar-item.active {
+  background: rgba(212, 162, 67, 0.12);
+  color: var(--color-accent);
+}
+
+/* Desktop content area */
+.desktop-content {
+  background: linear-gradient(180deg, rgba(12, 12, 14, 1) 0%, rgba(8, 8, 10, 1) 100%);
+}
+
+/* Desktop card grid */
+.desktop-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+/* Desktop sheet — side panel instead of bottom sheet */
+.desktop-panel {
+  background: var(--color-surface-elevated);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Desktop chat — wider, centered bubbles */
+@media (min-width: 1024px) {
+  .chat-messages-area {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .chat-input-area {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+}
+
+/* macOS window controls feel */
+.desktop-titlebar {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.desktop-titlebar button,
+.desktop-titlebar input {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* Glass effect — iOS frosted glass */
+.glass {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+}
+
+/* iOS-style inputs */
+input, textarea, select {
+  font-family: var(--font-body);
+  font-size: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.scroll-smooth {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ─── Gradient Backgrounds ─── */
+.gradient-header {
+  background: linear-gradient(180deg, rgba(212, 162, 67, 0.08) 0%, transparent 100%);
+}
+
+.gradient-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(212, 162, 67, 0.02) 100%);
+}
+
+.gradient-chat-empty {
+  background: radial-gradient(ellipse at 50% 30%, rgba(212, 162, 67, 0.06) 0%, transparent 60%);
+}
+
+/* ─── Glow Effects ─── */
+.glow-accent {
+  box-shadow: 0 0 20px rgba(212, 162, 67, 0.15), 0 0 60px rgba(212, 162, 67, 0.05);
+}
+
+.glow-status-idea { box-shadow: 0 0 12px rgba(191, 90, 242, 0.2); }
+.glow-status-progress { box-shadow: 0 0 12px rgba(10, 132, 255, 0.2); }
+.glow-status-done { box-shadow: 0 0 12px rgba(48, 209, 88, 0.2); }
+
+/* ─── Animations ─── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { transform: scale3d(0.95, 0.95, 1); opacity: 0; }
+  to { transform: scale3d(1, 1, 1); opacity: 1; }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 162, 67, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(212, 162, 67, 0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1.2); }
+}
+
+/* ─── Utility Classes ─── */
+.press-scale {
+  transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.press-scale:active {
+  transform: scale(0.97);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #d4a243 0%, #e8c876 50%, #d4a243 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Segmented Control ─── */
+.segmented-control {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+}
+.segmented-control button {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+}
+.segmented-control button.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Progress Ring ─── */
+.progress-ring {
+  transform: rotate(-90deg);
+}
+.progress-ring circle {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+/* ─── Typing Indicator ─── */
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: wave 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }

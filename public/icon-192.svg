@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a1e"/>
+      <stop offset="100%" stop-color="#0a0a0c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d4a243"/>
+      <stop offset="100%" stop-color="#e8c675"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="38" fill="url(#bg)"/>
+  <circle cx="96" cy="80" r="28" fill="none" stroke="url(#gold)" stroke-width="4"/>
+  <path d="M82 108 h28 l-4 24 h-20 z" fill="url(#gold)" opacity="0.9"/>
+  <rect x="80" y="136" width="32" height="4" rx="2" fill="url(#gold)" opacity="0.6"/>
+  <circle cx="96" cy="52" r="3" fill="#e8c675"/>
+  <line x1="96" y1="42" x2="96" y2="48" stroke="#e8c675" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="116" y1="60" x2="112" y2="64" stroke="#e8c675" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="76" y1="60" x2="80" y2="64" stroke="#e8c675" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="96" y="172" text-anchor="middle" fill="#d4a243" font-family="-apple-system,sans-serif" font-size="14" font-weight="600" letter-spacing="0.5">NETTO</text>
+</svg>

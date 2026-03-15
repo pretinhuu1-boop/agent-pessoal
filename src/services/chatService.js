@@ -1,13 +1,12 @@
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const STORAGE_KEY_API = 'agente-netto-api-key';
 const STORAGE_KEY_CHAT = 'agente-netto-chat';
 
 export function getApiKey() {
-  return localStorage.getItem(STORAGE_KEY_API) || '';
+  // No longer needed — proxy handles the key
+  return '__proxy__';
 }
 
-export function setApiKey(key) {
-  localStorage.setItem(STORAGE_KEY_API, key);
+export function setApiKey() {
+  // No-op — kept for Settings compatibility
 }
 
 export function loadChatHistory() {
@@ -28,222 +27,246 @@ export function clearChatHistory() {
   localStorage.removeItem(STORAGE_KEY_CHAT);
 }
 
-// ─── Tool Definitions ────────────────────────────────────────────────
+// ─── Tool Definitions (OpenAI format) ──────────────────────────────
 
 function buildTools() {
   return [
-    // === CRUD Tools ===
     {
-      name: 'list_ideas',
-      description: 'Lista todas as ideias do usuario. Retorna resumo com id, titulo, categoria, status, prioridade, tags e progresso de tarefas.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          filter_category: {
-            type: 'string',
-            description: 'Filtrar por categoria: marketing, vendas, conteudo, produto, estrategia, networking, outro',
-          },
-          filter_status: {
-            type: 'string',
-            description: 'Filtrar por status: idea, progress, done, paused',
-          },
-        },
-        required: [],
-      },
-    },
-    {
-      name: 'get_idea_details',
-      description: 'Obtem todos os detalhes de uma ideia especifica pelo ID, incluindo descricao completa, notas, tarefas, tags.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          idea_id: { type: 'string', description: 'O ID da ideia' },
-        },
-        required: ['idea_id'],
-      },
-    },
-    {
-      name: 'create_idea',
-      description: 'Cria uma nova ideia no sistema. SEMPRE preencha o maximo de campos possivel (titulo, descricao, categoria, prioridade, tags, tarefas). Retorna a ideia criada.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          title: { type: 'string', description: 'Titulo da ideia (obrigatorio)' },
-          description: { type: 'string', description: 'Descricao detalhada da ideia' },
-          category: {
-            type: 'string',
-            enum: ['marketing', 'vendas', 'conteudo', 'produto', 'estrategia', 'networking', 'outro'],
-            description: 'Categoria da ideia',
-          },
-          status: {
-            type: 'string',
-            enum: ['idea', 'progress', 'done', 'paused'],
-            description: 'Status da ideia',
-          },
-          priority: {
-            type: 'string',
-            enum: ['high', 'medium', 'low'],
-            description: 'Prioridade da ideia',
-          },
-          tags: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Tags para a ideia',
-          },
-          notes: { type: 'string', description: 'Notas livres' },
-          tasks: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Lista de tarefas (texto de cada tarefa)',
-          },
-        },
-        required: ['title'],
-      },
-    },
-    {
-      name: 'update_idea',
-      description: 'Atualiza uma ideia existente. Apenas os campos fornecidos serao atualizados.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          idea_id: { type: 'string', description: 'O ID da ideia a atualizar' },
-          title: { type: 'string' },
-          description: { type: 'string' },
-          category: {
-            type: 'string',
-            enum: ['marketing', 'vendas', 'conteudo', 'produto', 'estrategia', 'networking', 'outro'],
-          },
-          status: {
-            type: 'string',
-            enum: ['idea', 'progress', 'done', 'paused'],
-          },
-          priority: {
-            type: 'string',
-            enum: ['high', 'medium', 'low'],
-          },
-          tags: { type: 'array', items: { type: 'string' } },
-          notes: { type: 'string' },
-        },
-        required: ['idea_id'],
-      },
-    },
-    {
-      name: 'delete_idea',
-      description: 'Exclui uma ideia pelo ID. SEMPRE peca confirmacao antes de excluir.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          idea_id: { type: 'string', description: 'O ID da ideia a excluir' },
-        },
-        required: ['idea_id'],
-      },
-    },
-    {
-      name: 'add_tasks_to_idea',
-      description: 'Adiciona novas tarefas a uma ideia existente.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          idea_id: { type: 'string', description: 'O ID da ideia' },
-          tasks: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Lista de textos das novas tarefas',
-          },
-        },
-        required: ['idea_id', 'tasks'],
-      },
-    },
-
-    // === Agent Tools: Analytics & Intelligence ===
-    {
-      name: 'get_stats',
-      description: 'Retorna estatisticas gerais: total de ideias, distribuicao por status, por categoria, taxa de conclusao, tarefas pendentes.',
-      input_schema: {
-        type: 'object',
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: 'analyze_ideas',
-      description: 'Analisa todas as ideias e retorna insights: ideias paradas ha tempo, sem descricao, sem tarefas, oportunidades de conexao entre ideias, distribuicao de prioridades.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          focus: {
-            type: 'string',
-            enum: ['gaps', 'connections', 'stale', 'priorities', 'full'],
-            description: 'Foco da analise: gaps (campos vazios), connections (ideias relacionadas), stale (paradas), priorities (distribuicao), full (tudo)',
-          },
-        },
-        required: [],
-      },
-    },
-    {
-      name: 'daily_briefing',
-      description: 'Gera um briefing diario: ideias em andamento, tarefas pendentes, sugestoes do dia, proximos passos recomendados.',
-      input_schema: {
-        type: 'object',
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: 'priority_matrix',
-      description: 'Organiza as ideias em uma matriz de prioridade (urgente/importante) e sugere o que focar primeiro.',
-      input_schema: {
-        type: 'object',
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: 'search_ideas',
-      description: 'Busca ideias por texto no titulo, descricao, notas ou tags. Retorna resultados relevantes.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Texto para buscar' },
-        },
-        required: ['query'],
-      },
-    },
-    {
-      name: 'evaluate_idea',
-      description: 'Avalia a maturidade de uma ideia. Retorna: fase de desenvolvimento (semente/broto/crescimento/madura), score de completude, criterios atendidos e nao atendidos, e proximos passos recomendados. SEMPRE use esta ferramenta antes de editar ou dar conselhos sobre uma ideia especifica.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          idea_id: { type: 'string', description: 'O ID da ideia a avaliar' },
-        },
-        required: ['idea_id'],
-      },
-    },
-    {
-      name: 'batch_update',
-      description: 'Atualiza multiplas ideias de uma vez. Util para reorganizar, recategorizar ou mudar status em lote.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          updates: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                idea_id: { type: 'string' },
-                title: { type: 'string' },
-                category: { type: 'string' },
-                status: { type: 'string' },
-                priority: { type: 'string' },
-                tags: { type: 'array', items: { type: 'string' } },
-              },
-              required: ['idea_id'],
+      type: 'function',
+      function: {
+        name: 'list_ideas',
+        description: 'Lista todas as ideias do usuario. Retorna resumo com id, titulo, categoria, status, prioridade, tags e progresso de tarefas.',
+        parameters: {
+          type: 'object',
+          properties: {
+            filter_category: {
+              type: 'string',
+              description: 'Filtrar por categoria: marketing, vendas, conteudo, produto, estrategia, networking, outro',
             },
-            description: 'Lista de atualizacoes: cada item tem idea_id e os campos a atualizar',
+            filter_status: {
+              type: 'string',
+              description: 'Filtrar por status: idea, progress, done, paused',
+            },
           },
+          required: [],
         },
-        required: ['updates'],
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_idea_details',
+        description: 'Obtem todos os detalhes de uma ideia especifica pelo ID, incluindo descricao completa, notas, tarefas, tags.',
+        parameters: {
+          type: 'object',
+          properties: {
+            idea_id: { type: 'string', description: 'O ID da ideia' },
+          },
+          required: ['idea_id'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'create_idea',
+        description: 'Cria uma nova ideia no sistema. SEMPRE preencha o maximo de campos possivel (titulo, descricao, categoria, prioridade, tags, tarefas). Retorna a ideia criada.',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'Titulo da ideia (obrigatorio)' },
+            description: { type: 'string', description: 'Descricao detalhada da ideia' },
+            category: {
+              type: 'string',
+              enum: ['marketing', 'vendas', 'conteudo', 'produto', 'estrategia', 'networking', 'outro'],
+              description: 'Categoria da ideia',
+            },
+            status: {
+              type: 'string',
+              enum: ['idea', 'progress', 'done', 'paused'],
+              description: 'Status da ideia',
+            },
+            priority: {
+              type: 'string',
+              enum: ['high', 'medium', 'low'],
+              description: 'Prioridade da ideia',
+            },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Tags para a ideia',
+            },
+            notes: { type: 'string', description: 'Notas livres' },
+            tasks: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Lista de tarefas (texto de cada tarefa)',
+            },
+          },
+          required: ['title'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'update_idea',
+        description: 'Atualiza uma ideia existente. Apenas os campos fornecidos serao atualizados.',
+        parameters: {
+          type: 'object',
+          properties: {
+            idea_id: { type: 'string', description: 'O ID da ideia a atualizar' },
+            title: { type: 'string' },
+            description: { type: 'string' },
+            category: {
+              type: 'string',
+              enum: ['marketing', 'vendas', 'conteudo', 'produto', 'estrategia', 'networking', 'outro'],
+            },
+            status: {
+              type: 'string',
+              enum: ['idea', 'progress', 'done', 'paused'],
+            },
+            priority: {
+              type: 'string',
+              enum: ['high', 'medium', 'low'],
+            },
+            tags: { type: 'array', items: { type: 'string' } },
+            notes: { type: 'string' },
+          },
+          required: ['idea_id'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'delete_idea',
+        description: 'Exclui uma ideia pelo ID. SEMPRE peca confirmacao antes de excluir.',
+        parameters: {
+          type: 'object',
+          properties: {
+            idea_id: { type: 'string', description: 'O ID da ideia a excluir' },
+          },
+          required: ['idea_id'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'add_tasks_to_idea',
+        description: 'Adiciona novas tarefas a uma ideia existente.',
+        parameters: {
+          type: 'object',
+          properties: {
+            idea_id: { type: 'string', description: 'O ID da ideia' },
+            tasks: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Lista de textos das novas tarefas',
+            },
+          },
+          required: ['idea_id', 'tasks'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_stats',
+        description: 'Retorna estatisticas gerais: total de ideias, distribuicao por status, por categoria, taxa de conclusao, tarefas pendentes.',
+        parameters: { type: 'object', properties: {}, required: [] },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'analyze_ideas',
+        description: 'Analisa todas as ideias e retorna insights: ideias paradas ha tempo, sem descricao, sem tarefas, oportunidades de conexao entre ideias, distribuicao de prioridades.',
+        parameters: {
+          type: 'object',
+          properties: {
+            focus: {
+              type: 'string',
+              enum: ['gaps', 'connections', 'stale', 'priorities', 'full'],
+              description: 'Foco da analise: gaps (campos vazios), connections (ideias relacionadas), stale (paradas), priorities (distribuicao), full (tudo)',
+            },
+          },
+          required: [],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'daily_briefing',
+        description: 'Gera um briefing diario: ideias em andamento, tarefas pendentes, sugestoes do dia, proximos passos recomendados.',
+        parameters: { type: 'object', properties: {}, required: [] },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'priority_matrix',
+        description: 'Organiza as ideias em uma matriz de prioridade (urgente/importante) e sugere o que focar primeiro.',
+        parameters: { type: 'object', properties: {}, required: [] },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'search_ideas',
+        description: 'Busca ideias por texto no titulo, descricao, notas ou tags. Retorna resultados relevantes.',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Texto para buscar' },
+          },
+          required: ['query'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'evaluate_idea',
+        description: 'Avalia a maturidade de uma ideia. Retorna: fase de desenvolvimento (semente/broto/crescimento/madura), score de completude, criterios atendidos e nao atendidos, e proximos passos recomendados.',
+        parameters: {
+          type: 'object',
+          properties: {
+            idea_id: { type: 'string', description: 'O ID da ideia a avaliar' },
+          },
+          required: ['idea_id'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'batch_update',
+        description: 'Atualiza multiplas ideias de uma vez. Util para reorganizar, recategorizar ou mudar status em lote.',
+        parameters: {
+          type: 'object',
+          properties: {
+            updates: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  idea_id: { type: 'string' },
+                  title: { type: 'string' },
+                  category: { type: 'string' },
+                  status: { type: 'string' },
+                  priority: { type: 'string' },
+                  tags: { type: 'array', items: { type: 'string' } },
+                },
+                required: ['idea_id'],
+              },
+              description: 'Lista de atualizacoes: cada item tem idea_id e os campos a atualizar',
+            },
+          },
+          required: ['updates'],
+        },
       },
     },
   ];
@@ -300,24 +323,14 @@ Voce opera como um time de agentes, cada um com uma especialidade:
 9. **Questione quando necessario**: se falta informacao, pergunte antes de agir
 10. **Confirme acoes destrutivas**: antes de excluir, SEMPRE pergunte
 
-## ⚡ PROTOCOLO DE CONTEXTO (OBRIGATORIO)
+## PROTOCOLO DE CONTEXTO (OBRIGATORIO)
 
 ANTES de editar, aconselhar ou trabalhar com uma ideia especifica, SEMPRE execute este protocolo:
 
 1. **Buscar a ideia** → use get_idea_details para ver os dados completos
 2. **Avaliar maturidade** → use evaluate_idea para entender a fase e os criterios
-3. **Apresentar o diagnostico** ao usuario no formato:
-
-   ${phaseEmoji} **[Titulo]** — Fase: [Semente/Broto/Crescimento/Madura] ([score]%)
-   📊 Status: [avaliacao]
-   ✅ Criterios OK: [lista]
-   ❌ Falta: [lista]
-   🎯 Proximos passos sugeridos: [lista]
-
-4. **Perguntar ao usuario** o que ele quer fazer:
-   - "Quer que eu complete o que falta?"
-   - "Quer mudar o status para Em andamento?"
-   - "Quer que eu adicione tarefas?"
+3. **Apresentar o diagnostico** ao usuario
+4. **Perguntar ao usuario** o que ele quer fazer
 
 NUNCA edite uma ideia sem antes entender onde ela esta no ciclo de vida.
 
@@ -333,21 +346,10 @@ NUNCA edite uma ideia sem antes entender onde ela esta no ciclo de vida.
 - Se o usuario pede para CRIAR algo → use create_idea com todos os campos
 - Se o usuario quer EDITAR/VER uma ideia → PROTOCOLO DE CONTEXTO primeiro
 - Se o usuario quer ANALISE → use analyze_ideas + get_stats
-- Se o usuario quer ORIENTACAO → consulte as ideias (com evaluate_idea) e de conselhos baseados no contexto real
+- Se o usuario quer ORIENTACAO → consulte as ideias e de conselhos baseados no contexto real
 - Se o usuario quer ORGANIZACAO → use list_ideas, priority_matrix, batch_update
 - Se o usuario pede BRIEFING → use daily_briefing
 - Se o usuario quer BUSCAR → use search_ideas
-
-## FORMATO DE RESPOSTA
-
-Quando criar uma ideia, confirme com um resumo formatado:
-✅ **Ideia criada**: [titulo]
-📂 Categoria: [cat] | 🔴 Prioridade: [pri]
-📝 [num] tarefas definidas
-🌱 Fase: Semente — proximo passo: [sugestao]
-
-Quando analisar, use estrutura clara com secoes.
-Quando listar ideias, inclua a fase de cada uma (🌱🌿🌳🍎).
 
 ${contextBlock}
 
@@ -361,7 +363,6 @@ ${greeting}! Hora de trabalhar.`;
 // ─── Tool Execution Engine ────────────────────────────────────────────
 
 function executeTool(toolName, toolInput, getStoreRef) {
-  // Always get fresh store state
   const store = getStoreRef();
   const { allIdeas, addIdea, updateIdea, deleteIdea, addTask, stats, CATEGORIES, STATUSES } = store;
 
@@ -375,16 +376,11 @@ function executeTool(toolName, toolInput, getStoreRef) {
         filtered = filtered.filter(i => i.status === toolInput.filter_status);
       }
       const list = filtered.map(i => ({
-        id: i.id,
-        title: i.title,
-        category: i.category,
-        status: i.status,
-        priority: i.priority,
-        tags: i.tags,
+        id: i.id, title: i.title, category: i.category,
+        status: i.status, priority: i.priority, tags: i.tags,
         tasks_total: i.tasks.length,
         tasks_done: i.tasks.filter(t => t.done).length,
-        createdAt: i.createdAt,
-        updatedAt: i.updatedAt,
+        createdAt: i.createdAt, updatedAt: i.updatedAt,
       }));
       return JSON.stringify({ count: list.length, ideas: list });
     }
@@ -444,15 +440,13 @@ function executeTool(toolName, toolInput, getStoreRef) {
       return JSON.stringify({
         total_ideias: stats.total,
         por_status: {
-          ideias: stats.ideas,
-          em_andamento: stats.progress,
+          ideias: stats.ideas, em_andamento: stats.progress,
           concluidas: stats.done,
           pausadas: allIdeas.filter(i => i.status === 'paused').length,
         },
         por_categoria: catCounts,
         tarefas: {
-          total: totalTasks,
-          concluidas: doneTasks,
+          total: totalTasks, concluidas: doneTasks,
           pendentes: totalTasks - doneTasks,
           taxa_conclusao: totalTasks > 0 ? `${Math.round(doneTasks/totalTasks*100)}%` : '0%',
         },
@@ -479,13 +473,11 @@ function executeTool(toolName, toolInput, getStoreRef) {
         const stale = allIdeas.filter(i => {
           if (i.status === 'done') return false;
           const updated = new Date(i.updatedAt).getTime();
-          return (now - updated) > 7 * 24 * 60 * 60 * 1000; // 7 days
+          return (now - updated) > 7 * 24 * 60 * 60 * 1000;
         });
         result.paradas_ha_7_dias = stale.map(i => ({
-          id: i.id,
-          title: i.title,
-          status: i.status,
-          dias_sem_atualizar: Math.floor((now - new Date(i.updatedAt).getTime()) / (24*60*60*1000)),
+          id: i.id, title: i.title, status: i.status,
+          dias_sem_atualizar: Math.floor((Date.now() - new Date(i.updatedAt).getTime()) / (24*60*60*1000)),
         }));
       }
 
@@ -493,8 +485,7 @@ function executeTool(toolName, toolInput, getStoreRef) {
         const connections = [];
         for (let i = 0; i < allIdeas.length; i++) {
           for (let j = i + 1; j < allIdeas.length; j++) {
-            const a = allIdeas[i];
-            const b = allIdeas[j];
+            const a = allIdeas[i], b = allIdeas[j];
             const sharedTags = a.tags.filter(t => b.tags.includes(t));
             const sameCategory = a.category === b.category;
             if (sharedTags.length > 0 || sameCategory) {
@@ -510,12 +501,11 @@ function executeTool(toolName, toolInput, getStoreRef) {
       }
 
       if (focus === 'priorities' || focus === 'full') {
-        const priDist = {
+        result.distribuicao_prioridades = {
           alta: allIdeas.filter(i => i.priority === 'high' && i.status !== 'done').length,
           media: allIdeas.filter(i => i.priority === 'medium' && i.status !== 'done').length,
           baixa: allIdeas.filter(i => i.priority === 'low' && i.status !== 'done').length,
         };
-        result.distribuicao_prioridades = priDist;
       }
 
       return JSON.stringify(result);
@@ -528,9 +518,7 @@ function executeTool(toolName, toolInput, getStoreRef) {
       const pendingTasks = [];
       for (const idea of allIdeas) {
         for (const task of idea.tasks) {
-          if (!task.done) {
-            pendingTasks.push({ idea_title: idea.title, task: task.text });
-          }
+          if (!task.done) pendingTasks.push({ idea_title: idea.title, task: task.text });
         }
       }
       const recentIdeas = allIdeas
@@ -552,7 +540,7 @@ function executeTool(toolName, toolInput, getStoreRef) {
 
     case 'priority_matrix': {
       const active = allIdeas.filter(i => i.status !== 'done');
-      const matrix = {
+      return JSON.stringify({
         urgente_importante: active.filter(i => i.priority === 'high' && i.status === 'progress')
           .map(i => ({ id: i.id, title: i.title, category: i.category })),
         importante_nao_urgente: active.filter(i => i.priority === 'high' && i.status !== 'progress')
@@ -563,24 +551,18 @@ function executeTool(toolName, toolInput, getStoreRef) {
           .map(i => ({ id: i.id, title: i.title, category: i.category })),
         pausadas: active.filter(i => i.status === 'paused')
           .map(i => ({ id: i.id, title: i.title, priority: i.priority })),
-      };
-      return JSON.stringify(matrix);
+      });
     }
 
     case 'search_ideas': {
       const q = (toolInput.query || '').toLowerCase();
-      const results = allIdeas.filter(i => {
-        return (
-          i.title.toLowerCase().includes(q) ||
-          i.description.toLowerCase().includes(q) ||
-          (i.notes || '').toLowerCase().includes(q) ||
-          i.tags.some(t => t.toLowerCase().includes(q))
-        );
-      }).map(i => ({
-        id: i.id,
-        title: i.title,
-        category: i.category,
-        status: i.status,
+      const results = allIdeas.filter(i =>
+        i.title.toLowerCase().includes(q) ||
+        i.description.toLowerCase().includes(q) ||
+        (i.notes || '').toLowerCase().includes(q) ||
+        i.tags.some(t => t.toLowerCase().includes(q))
+      ).map(i => ({
+        id: i.id, title: i.title, category: i.category, status: i.status,
         match_in: [
           i.title.toLowerCase().includes(q) && 'titulo',
           i.description.toLowerCase().includes(q) && 'descricao',
@@ -602,7 +584,6 @@ function executeTool(toolName, toolInput, getStoreRef) {
       const doneTasks = idea.tasks.filter(t => t.done).length;
       const taskProgress = totalTasks > 0 ? Math.round(doneTasks / totalTasks * 100) : 0;
 
-      // Criteria evaluation
       const criteria = {
         tem_titulo: !!idea.title && idea.title.length > 3,
         tem_descricao: !!idea.description && idea.description.length >= 10,
@@ -619,64 +600,30 @@ function executeTool(toolName, toolInput, getStoreRef) {
       const totalCriteria = Object.keys(criteria).length;
       const completenessScore = Math.round((criteriaCount / totalCriteria) * 100);
 
-      // Development phase
       let phase, phaseEmoji;
-      if (completenessScore <= 25) {
-        phase = 'Semente';
-        phaseEmoji = '🌱';
-      } else if (completenessScore <= 50) {
-        phase = 'Broto';
-        phaseEmoji = '🌿';
-      } else if (completenessScore <= 75) {
-        phase = 'Crescimento';
-        phaseEmoji = '🌳';
-      } else {
-        phase = 'Madura';
-        phaseEmoji = '🍎';
-      }
+      if (completenessScore <= 25) { phase = 'Semente'; phaseEmoji = '🌱'; }
+      else if (completenessScore <= 50) { phase = 'Broto'; phaseEmoji = '🌿'; }
+      else if (completenessScore <= 75) { phase = 'Crescimento'; phaseEmoji = '🌳'; }
+      else { phase = 'Madura'; phaseEmoji = '🍎'; }
 
-      // Status assessment
-      let statusAssessment;
-      if (idea.status === 'done') {
-        statusAssessment = 'Concluida — pode ser arquivada ou evoluida';
-      } else if (idea.status === 'paused') {
-        statusAssessment = `Pausada ha ${updatedDays} dias — precisa de decisao: retomar ou arquivar`;
-      } else if (idea.status === 'progress') {
-        statusAssessment = `Em andamento — ${taskProgress}% das tarefas concluidas`;
-      } else {
-        statusAssessment = `Ainda e uma ideia — precisa de estruturacao para avancar`;
-      }
-
-      // Next steps based on missing criteria
       const nextSteps = [];
-      if (!criteria.tem_descricao) nextSteps.push('Adicionar uma descricao detalhada (o que, por que, para quem)');
+      if (!criteria.tem_descricao) nextSteps.push('Adicionar uma descricao detalhada');
       if (!criteria.tem_categoria || idea.category === 'outro') nextSteps.push('Definir a categoria correta');
-      if (!criteria.tem_tags) nextSteps.push('Adicionar tags para facilitar buscas e conexoes');
-      if (!criteria.tem_tarefas) nextSteps.push('Criar um plano de acao com pelo menos 3 tarefas');
-      if (criteria.tem_tarefas && !criteria.mais_de_3_tarefas) nextSteps.push('Expandir o plano: adicionar mais tarefas detalhadas');
-      if (!criteria.tem_notas) nextSteps.push('Registrar notas e reflexoes sobre a ideia');
-      if (criteria.tem_tarefas && !criteria.tarefas_em_progresso) nextSteps.push('Comecar a executar: marcar primeiras tarefas como concluidas');
-      if (idea.status === 'idea' && completenessScore >= 50) nextSteps.push('Mover para "Em andamento" — a ideia ja esta estruturada');
-      if (idea.status === 'paused' && updatedDays > 14) nextSteps.push('Decidir: retomar com energia ou excluir para liberar foco');
+      if (!criteria.tem_tags) nextSteps.push('Adicionar tags');
+      if (!criteria.tem_tarefas) nextSteps.push('Criar plano de acao com pelo menos 3 tarefas');
+      if (criteria.tem_tarefas && !criteria.mais_de_3_tarefas) nextSteps.push('Expandir plano: adicionar mais tarefas');
+      if (!criteria.tem_notas) nextSteps.push('Registrar notas');
+      if (criteria.tem_tarefas && !criteria.tarefas_em_progresso) nextSteps.push('Comecar a executar: marcar primeiras tarefas');
 
-      // Related ideas
       const related = allIdeas.filter(other =>
         other.id !== idea.id && (
           other.category === idea.category ||
           other.tags.some(t => idea.tags.includes(t))
         )
-      ).map(r => ({ id: r.id, title: r.title, conexao: r.category === idea.category ? 'mesma categoria' : 'tags em comum' }));
+      ).map(r => ({ id: r.id, title: r.title }));
 
       return JSON.stringify({
-        ideia: {
-          id: idea.id,
-          titulo: idea.title,
-          status: idea.status,
-          categoria: idea.category,
-          prioridade: idea.priority,
-          criada_ha_dias: createdDays,
-          atualizada_ha_dias: updatedDays,
-        },
+        ideia: { id: idea.id, titulo: idea.title, status: idea.status, categoria: idea.category, prioridade: idea.priority, criada_ha_dias: createdDays, atualizada_ha_dias: updatedDays },
         fase: { nome: phase, emoji: phaseEmoji, descricao: `${phase} — ${completenessScore}% de maturidade` },
         score_completude: `${completenessScore}%`,
         criterios: {
@@ -684,7 +631,6 @@ function executeTool(toolName, toolInput, getStoreRef) {
           nao_atendidos: Object.entries(criteria).filter(([,v]) => !v).map(([k]) => k),
           total: `${criteriaCount}/${totalCriteria}`,
         },
-        avaliacao_status: statusAssessment,
         tarefas: { total: totalTasks, concluidas: doneTasks, progresso: `${taskProgress}%` },
         proximos_passos: nextSteps,
         ideias_relacionadas: related.slice(0, 5),
@@ -711,47 +657,42 @@ function executeTool(toolName, toolInput, getStoreRef) {
   }
 }
 
-// ─── Streaming Chat Engine ────────────────────────────────────────────
+// ─── Streaming Chat Engine (OpenAI/Groq format) ──────────────────────
 
 export async function* streamChat(userMessage, chatHistory, getStoreRef) {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    yield { type: 'error', message: 'Configure sua chave da API primeiro nas configuracoes.' };
-    return;
-  }
-
   const tools = buildTools();
   const store = getStoreRef();
   const systemPrompt = buildSystemPrompt(store.allIdeas);
 
-  // Build API messages from chat history
-  const apiMessages = chatHistory
-    .filter(m => m.role === 'user' || m.role === 'assistant')
-    .map(m => ({ role: m.role, content: m.content }));
+  // Build messages in OpenAI format
+  const apiMessages = [
+    { role: 'system', content: systemPrompt },
+  ];
+
+  // Add chat history
+  for (const m of chatHistory) {
+    if (m.role === 'user' || m.role === 'assistant') {
+      apiMessages.push({ role: m.role, content: m.content });
+    }
+  }
 
   apiMessages.push({ role: 'user', content: userMessage });
 
   let continueLoop = true;
   let loopCount = 0;
-  const MAX_LOOPS = 8; // Safety limit for agentic loops
+  const MAX_LOOPS = 8;
 
   while (continueLoop && loopCount < MAX_LOOPS) {
     continueLoop = false;
     loopCount++;
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5',
+          model: 'llama-3.3-70b-versatile',
           max_tokens: 4096,
-          system: systemPrompt,
           tools,
           stream: true,
           messages: apiMessages,
@@ -760,16 +701,14 @@ export async function* streamChat(userMessage, chatHistory, getStoreRef) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const msg = errorData?.error?.message || `Erro ${response.status}`;
+        const msg = errorData?.error?.message || errorData?.error || `Erro ${response.status}`;
 
         if (response.status === 401) {
-          yield { type: 'error', message: 'Chave da API invalida. Verifique nas configuracoes.' };
+          yield { type: 'error', message: 'Chave da API invalida.' };
         } else if (response.status === 429) {
-          yield { type: 'error', message: 'Muitas requisicoes. Aguarde um momento e tente novamente.' };
-        } else if (response.status === 529) {
-          yield { type: 'error', message: 'API sobrecarregada. Tente novamente em alguns segundos.' };
+          yield { type: 'error', message: 'Muitas requisicoes. Aguarde um momento.' };
         } else {
-          yield { type: 'error', message: msg };
+          yield { type: 'error', message: String(msg) };
         }
         return;
       }
@@ -778,11 +717,8 @@ export async function* streamChat(userMessage, chatHistory, getStoreRef) {
       const decoder = new TextDecoder();
       let buffer = '';
       let currentText = '';
-      let contentBlocks = [];
-      let currentBlockType = null;
-      let toolUseBlock = null;
-      let inputJsonStr = '';
-      let stopReason = null;
+      let toolCalls = {}; // indexed by tool call index
+      let finishReason = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -804,92 +740,89 @@ export async function* streamChat(userMessage, chatHistory, getStoreRef) {
             continue;
           }
 
-          switch (event.type) {
-            case 'content_block_start':
-              if (event.content_block.type === 'text') {
-                currentBlockType = 'text';
-                currentText = '';
-              } else if (event.content_block.type === 'tool_use') {
-                currentBlockType = 'tool_use';
-                toolUseBlock = {
-                  type: 'tool_use',
-                  id: event.content_block.id,
-                  name: event.content_block.name,
-                  input: {},
+          const choice = event.choices?.[0];
+          if (!choice) continue;
+
+          if (choice.finish_reason) {
+            finishReason = choice.finish_reason;
+          }
+
+          const delta = choice.delta;
+          if (!delta) continue;
+
+          // Text content
+          if (delta.content) {
+            currentText += delta.content;
+            yield { type: 'text_delta', text: delta.content };
+          }
+
+          // Tool calls
+          if (delta.tool_calls) {
+            for (const tc of delta.tool_calls) {
+              const idx = tc.index;
+              if (!toolCalls[idx]) {
+                toolCalls[idx] = {
+                  id: tc.id || '',
+                  name: tc.function?.name || '',
+                  arguments: '',
                 };
-                inputJsonStr = '';
               }
-              break;
-
-            case 'content_block_delta':
-              if (event.delta.type === 'text_delta') {
-                currentText += event.delta.text;
-                yield { type: 'text_delta', text: event.delta.text };
-              } else if (event.delta.type === 'input_json_delta') {
-                inputJsonStr += event.delta.partial_json;
-              }
-              break;
-
-            case 'content_block_stop':
-              if (currentBlockType === 'text' && currentText) {
-                contentBlocks.push({ type: 'text', text: currentText });
-              } else if (currentBlockType === 'tool_use' && toolUseBlock) {
-                try {
-                  toolUseBlock.input = JSON.parse(inputJsonStr);
-                } catch {
-                  toolUseBlock.input = {};
-                }
-                contentBlocks.push(toolUseBlock);
-              }
-              currentBlockType = null;
-              break;
-
-            case 'message_delta':
-              if (event.delta?.stop_reason) {
-                stopReason = event.delta.stop_reason;
-              }
-              break;
+              if (tc.id) toolCalls[idx].id = tc.id;
+              if (tc.function?.name) toolCalls[idx].name = tc.function.name;
+              if (tc.function?.arguments) toolCalls[idx].arguments += tc.function.arguments;
+            }
           }
         }
       }
 
-      // Add assistant response to messages
-      apiMessages.push({ role: 'assistant', content: contentBlocks });
+      // Build assistant message for history
+      const assistantMsg = { role: 'assistant', content: currentText || null };
+      const toolCallsList = Object.values(toolCalls);
 
-      // If Claude wants to use tools, execute them and continue
-      if (stopReason === 'tool_use') {
-        const toolResults = [];
+      if (toolCallsList.length > 0) {
+        assistantMsg.tool_calls = toolCallsList.map(tc => ({
+          id: tc.id,
+          type: 'function',
+          function: { name: tc.name, arguments: tc.arguments },
+        }));
+      }
 
-        for (const block of contentBlocks) {
-          if (block.type === 'tool_use') {
-            yield { type: 'tool_call', name: block.name, input: block.input };
-            // Use getStoreRef() for fresh state each time
-            const result = executeTool(block.name, block.input, getStoreRef);
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: result,
-            });
-          }
+      apiMessages.push(assistantMsg);
+
+      // Execute tool calls if any
+      if (finishReason === 'tool_calls' && toolCallsList.length > 0) {
+        for (const tc of toolCallsList) {
+          let input = {};
+          try { input = JSON.parse(tc.arguments); } catch {}
+
+          yield { type: 'tool_call', name: tc.name, input };
+
+          const result = executeTool(tc.name, input, getStoreRef);
+
+          // Add tool result in OpenAI format
+          apiMessages.push({
+            role: 'tool',
+            tool_call_id: tc.id,
+            content: result,
+          });
         }
 
-        apiMessages.push({ role: 'user', content: toolResults });
-        contentBlocks = [];
+        toolCalls = {};
         currentText = '';
         continueLoop = true;
       }
     } catch (err) {
       if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        yield { type: 'error', message: 'Sem conexao com a internet. Verifique sua rede.' };
+        yield { type: 'error', message: 'Sem conexao com a internet.' };
       } else {
-        yield { type: 'error', message: `Erro de conexao: ${err.message}` };
+        yield { type: 'error', message: `Erro: ${err.message}` };
       }
       return;
     }
   }
 
   if (loopCount >= MAX_LOOPS) {
-    yield { type: 'text_delta', text: '\n\n⚠️ *Limite de operacoes atingido. Me mande outra mensagem para continuar.*' };
+    yield { type: 'text_delta', text: '\n\n⚠️ *Limite de operacoes atingido.*' };
   }
 
   yield { type: 'done' };

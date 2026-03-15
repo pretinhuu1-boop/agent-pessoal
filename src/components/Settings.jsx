@@ -1,24 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Key, Eye, EyeOff, Check, Trash2, Download, FileJson, FileSpreadsheet, FileText } from 'lucide-react';
-import { getApiKey, setApiKey, clearChatHistory } from '../services/chatService';
+import { X, Check, Trash2, Download, FileJson, FileSpreadsheet, FileText } from 'lucide-react';
+import { clearChatHistory } from '../services/chatService';
 import { exportJSON, exportCSV, exportReport } from '../services/exportService';
 import { getUserName, setUserName } from '../store/useStore';
 
 export default function Settings({ onClose, ideas = [], onNameChange }) {
-  const [key, setKey] = useState(getApiKey());
-  const [showKey, setShowKey] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [cleared, setCleared] = useState(false);
   const [exported, setExported] = useState(null);
   const [name, setName] = useState(getUserName());
   const [nameSaved, setNameSaved] = useState(false);
-
-  const handleSave = () => {
-    setApiKey(key.trim());
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
 
   const handleClearChat = () => {
     clearChatHistory();
@@ -91,52 +82,14 @@ export default function Settings({ onClose, ideas = [], onNameChange }) {
               </p>
             </div>
 
-            {/* API Key */}
-            <div>
-              <label className="text-[11px] text-text-secondary mb-1.5 block font-medium uppercase tracking-wider">
-                <Key size={10} className="inline mr-1" />
-                Chave da API (Anthropic)
-              </label>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={key}
-                    onChange={e => setKey(e.target.value)}
-                    placeholder="sk-ant-..."
-                    className="w-full bg-white/4 border border-border rounded-xl py-2.5 px-3 pr-10 text-[14px] text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/30 font-mono transition-colors"
-                  />
-                  <button
-                    onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary"
-                  >
-                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-                <button
-                  onClick={handleSave}
-                  className={`px-4 rounded-xl text-[13px] font-medium transition-all duration-200 press-scale ${
-                    saved
-                      ? 'bg-status-done/15 text-status-done'
-                      : 'bg-accent/10 text-accent'
-                  }`}
-                >
-                  {saved ? <Check size={15} /> : 'Salvar'}
-                </button>
-              </div>
-              <p className="text-[10px] text-text-tertiary mt-1.5 leading-relaxed">
-                Sua chave fica armazenada localmente. Nunca e enviada para servidores externos alem da API da Anthropic.
-              </p>
-            </div>
-
             {/* Model Info */}
             <div className="bg-white/3 rounded-xl border border-border p-3">
               <div className="text-[11px] text-text-secondary font-medium uppercase tracking-wider mb-0.5">
-                Modelo
+                Modelo IA
               </div>
-              <div className="text-[14px] text-text-primary font-medium">Claude Haiku 4.5</div>
+              <div className="text-[14px] text-text-primary font-medium">Llama 3.3 70B</div>
               <div className="text-[10px] text-text-tertiary mt-0.5">
-                Rapido e economico — ideal para chat interativo
+                Potente e rapido — powered by Groq
               </div>
             </div>
 

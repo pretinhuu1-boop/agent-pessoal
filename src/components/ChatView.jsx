@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Send, Settings as SettingsIcon, Sparkles, Loader2, RotateCcw, Mic, MicOff } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { streamChat, loadChatHistory, saveChatHistory, getApiKey, clearChatHistory } from '../services/chatService';
+import { streamChat, loadChatHistory, saveChatHistory, clearChatHistory } from '../services/chatService';
 import ChatMessage from './ChatMessage';
 import Settings from './Settings';
 
@@ -141,11 +141,6 @@ export default function ChatView({ userName = 'Netto' }) {
   const handleSend = async (overrideText) => {
     const text = (overrideText || input).trim();
     if (!text || isStreaming) return;
-
-    if (!getApiKey()) {
-      setShowSettings(true);
-      return;
-    }
 
     setInput('');
     setIsStreaming(true);

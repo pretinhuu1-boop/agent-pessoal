@@ -48,8 +48,8 @@ function ProgressRing({ progress, color, size = 32, strokeWidth = 2.5 }) {
   );
 }
 
-export default function IdeaCard({ idea, index, onOpen, CATEGORIES, STATUSES, PRIORITIES }) {
-  const category = CATEGORIES.find(c => c.id === idea.category) || CATEGORIES[6];
+export default function IdeaCard({ idea, index, onOpen, CATEGORIES, STATUSES, PRIORITIES, getCategoryDisplay }) {
+  const category = getCategoryDisplay ? getCategoryDisplay(idea.category) : (CATEGORIES.find(c => c.id === idea.category) || CATEGORIES[6]);
   const status = STATUSES.find(s => s.id === idea.status) || STATUSES[0];
   const priority = PRIORITIES.find(p => p.id === idea.priority) || PRIORITIES[1];
   const doneTasks = idea.tasks.filter(t => t.done).length;

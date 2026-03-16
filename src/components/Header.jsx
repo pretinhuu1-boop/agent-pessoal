@@ -1,8 +1,8 @@
-import { Search, SlidersHorizontal, X, TrendingUp } from 'lucide-react';
+import { Search, SlidersHorizontal, X, TrendingUp, Users } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function Header({ stats, search, setSearch, filter, setFilter, sortBy, setSortBy, CATEGORIES, STATUSES, userName = 'Netto' }) {
+export default function Header({ stats, search, setSearch, filter, setFilter, sortBy, setSortBy, CATEGORIES, STATUSES, userName = 'Netto', onOpenContacts, contactCount = 0 }) {
   const [showSearch, setShowSearch] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -48,6 +48,19 @@ export default function Header({ stats, search, setSearch, filter, setFilter, so
             >
               <SlidersHorizontal size={15} />
             </button>
+            {onOpenContacts && (
+              <button
+                onClick={onOpenContacts}
+                className="relative w-9 h-9 rounded-full flex items-center justify-center bg-white/5 text-text-secondary transition-all duration-200 hover:bg-white/8"
+              >
+                <Users size={15} />
+                {contactCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-accent text-surface text-[9px] font-bold flex items-center justify-center">
+                    {contactCount > 9 ? '9+' : contactCount}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 

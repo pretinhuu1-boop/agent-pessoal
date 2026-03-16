@@ -50,9 +50,9 @@ function evaluateIdea(idea) {
 }
 
 /**
- * Gera texto formatado para compartilhamento
+ * Gera texto no modelo PESSOAL — completo, com emojis, todas as infos
  */
-export function generateShareText(idea) {
+export function generatePersonalText(idea) {
   const status = STATUS_MAP[idea.status] || STATUS_MAP.idea;
   const priority = PRIORITY_MAP[idea.priority] || PRIORITY_MAP.medium;
   const category = CATEGORY_MAP[idea.category] || CATEGORY_MAP.outro;
@@ -63,27 +63,22 @@ export function generateShareText(idea) {
 
   let text = '';
 
-  // Header
   text += `✨ *${idea.title || 'Sem título'}*\n`;
   text += `━━━━━━━━━━━━━━━━\n\n`;
 
-  // Description
   if (idea.description) {
     text += `📝 ${idea.description}\n\n`;
   }
 
-  // Status line
   text += `${status.emoji} *Status:* ${status.label}\n`;
   text += `${priority.emoji} *Prioridade:* ${priority.label}\n`;
   text += `📂 *Categoria:* ${category}\n`;
   text += `${phase.emoji} *Maturidade:* ${phase.name} (${score}%)\n`;
 
-  // Tags / Connections
   if (idea.tags?.length > 0) {
     text += `\n🏷️ *Conexões:* ${idea.tags.map(t => `#${t}`).join(' ')}\n`;
   }
 
-  // Tasks / Goals
   if (totalTasks > 0) {
     text += `\n🎯 *Metas (${doneTasks}/${totalTasks}):*\n`;
     idea.tasks.forEach(task => {
@@ -91,12 +86,10 @@ export function generateShareText(idea) {
     });
   }
 
-  // Notes
   if (idea.notes?.trim()) {
     text += `\n📌 *Notas:*\n${idea.notes.trim()}\n`;
   }
 
-  // Footer
   text += `\n━━━━━━━━━━━━━━━━\n`;
   text += `_Enviado pelo Agente Netto_ 💡`;
 
@@ -104,28 +97,73 @@ export function generateShareText(idea) {
 }
 
 /**
+ * Gera texto no modelo PROPOSTA — profissional, CTA de venda, comunicação clara
+ * @param {Object} idea
+ * @param {Object} options - { includeTasks: boolean }
+ */
+export function generateProposalText(idea, options = {}) {
+  const { includeTasks = false } = options;
+  const category = CATEGORY_MAP[idea.category]?.split(' ')[1] || 'Projeto';
+
+  let text = '';
+
+  // Header profissional
+  text += `*${idea.title || 'Proposta'}*\n`;
+  text += `${category}\n\n`;
+
+  // Descrição clara e direta
+  if (idea.description) {
+    text += `${idea.description}\n\n`;
+  }
+
+  // Escopo / Entregas (tarefas como itens de entrega)
+  if (includeTasks && idea.tasks?.length > 0) {
+    const totalTasks = idea.tasks.length;
+    const doneTasks = idea.tasks.filter(t => t.done).length;
+
+    text += `*Entregas previstas:*\n`;
+    idea.tasks.forEach((task, i) => {
+      text += `${i + 1}. ${task.text}${task.done ? ' (concluído)' : ''}\n`;
+    });
+    text += `\nProgresso: ${doneTasks}/${totalTasks} concluídos\n\n`;
+  }
+
+  // CTA profissional
+  text += `---\n`;
+  text += `Tem interesse? Vamos conversar.\n`;
+  text += `Fico no aguardo do seu retorno.`;
+
+  return text;
+}
+
+/**
+ * Gera texto formatado (compatibilidade — usa modelo pessoal por padrao)
+ */
+export function generateShareText(idea, template = 'pessoal', options = {}) {
+  if (template === 'proposta') return generateProposalText(idea, options);
+  return generatePersonalText(idea);
+}
+
+/**
  * Compartilha via Web Share API ou fallback WhatsApp
  */
-export async function shareIdea(idea) {
-  const text = generateShareText(idea);
+export async function shareIdea(idea, template = 'pessoal', options = {}) {
+  const text = generateShareText(idea, template, options);
 
-  // Try Web Share API first (mobile native)
   if (navigator.share) {
     try {
       await navigator.share({
-        title: `💡 ${idea.title}`,
+        title: template === 'proposta' ? idea.title : `💡 ${idea.title}`,
         text: text,
       });
       return { success: true, method: 'native' };
     } catch (err) {
-      // User cancelled or error — fall through to WhatsApp
       if (err.name === 'AbortError') {
         return { success: false, method: 'cancelled' };
       }
     }
   }
 
-  // Fallback: open WhatsApp directly
   const encoded = encodeURIComponent(text);
   window.open(`https://wa.me/?text=${encoded}`, '_blank');
   return { success: true, method: 'whatsapp' };
@@ -134,8 +172,8 @@ export async function shareIdea(idea) {
 /**
  * Compartilha direto para um contato específico no WhatsApp
  */
-export function shareToWhatsApp(idea, phoneNumber = '') {
-  const text = generateShareText(idea);
+export function shareToWhatsApp(idea, phoneNumber = '', template = 'pessoal', options = {}) {
+  const text = generateShareText(idea, template, options);
   const encoded = encodeURIComponent(text);
   const phone = phoneNumber.replace(/\D/g, '');
   const url = phone
@@ -163,8 +201,8 @@ export async function copyToClipboard(text) {
   }
 }
 
-export async function copyIdeaText(idea) {
-  const text = generateShareText(idea);
+export async function copyIdeaText(idea, template = 'pessoal', options = {}) {
+  const text = generateShareText(idea, template, options);
   return copyToClipboard(text);
 }
 

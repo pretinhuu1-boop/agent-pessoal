@@ -1,8 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { v4 as uuid } from 'uuid';
-
-const STORAGE_KEY = 'agente-netto-ideas';
-const USERNAME_KEY = 'agente-netto-username';
+import { databases, DATABASE_ID, IDEAS_COLLECTION_ID } from '../lib/appwrite';
+import { ID, Query } from 'appwrite';
 
 const CATEGORIES = [
   { id: 'marketing', label: 'Marketing', emoji: '📣', color: '#0a84ff' },
@@ -27,113 +25,173 @@ const PRIORITIES = [
   { id: 'low', label: 'Baixa', emoji: '🟢' },
 ];
 
-function loadIdeas() {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
+function docToIdea(doc) {
+  return {
+    id: doc.$id,
+    title: doc.title || '',
+    description: doc.description || '',
+    category: doc.category || 'outro',
+    status: doc.status || 'idea',
+    priority: doc.priority || 'medium',
+    tags: doc.tags || [],
+    notes: doc.notes || '',
+    tasks: doc.tasks ? JSON.parse(doc.tasks) : [],
+    order: doc.order || 0,
+    createdAt: doc.$createdAt,
+    updatedAt: doc.$updatedAt,
+  };
 }
 
-function saveIdeas(ideas) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
-}
-
-export function getUserName() {
-  return localStorage.getItem(USERNAME_KEY) || 'Netto';
-}
-
-export function setUserName(name) {
-  localStorage.setItem(USERNAME_KEY, name);
-}
-
-export function useStore() {
-  const [ideas, setIdeas] = useState(loadIdeas);
+export function useStore(userId) {
+  const [ideas, setIdeas] = useState([]);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
-  const [userName, _setUserName] = useState(getUserName);
-
-  const updateUserName = useCallback((name) => {
-    const trimmed = name.trim() || 'Netto';
-    setUserName(trimmed);
-    _setUserName(trimmed);
-  }, []);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    saveIdeas(ideas);
-  }, [ideas]);
+    if (!userId) {
+      setIdeas([]);
+      setLoading(false);
+      return;
+    }
 
-  const addIdea = useCallback((idea) => {
-    const newIdea = {
-      id: uuid(),
-      title: idea.title || '',
-      description: idea.description || '',
-      category: idea.category || 'outro',
-      status: idea.status || 'idea',
-      priority: idea.priority || 'medium',
-      tags: idea.tags || [],
-      notes: idea.notes || '',
-      tasks: idea.tasks || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      order: ideas.length,
-    };
-    setIdeas(prev => [newIdea, ...prev]);
-    return newIdea;
-  }, [ideas.length]);
+    async function load() {
+      setLoading(true);
+      try {
+        const res = await databases.listDocuments(DATABASE_ID, IDEAS_COLLECTION_ID, [
+          Query.equal('userId', userId),
+          Query.orderDesc('$createdAt'),
+          Query.limit(500),
+        ]);
+        setIdeas(res.documents.map(docToIdea));
+      } catch (err) {
+        console.error('Error loading ideas:', err);
+      }
+      setLoading(false);
+    }
 
-  const updateIdea = useCallback((id, updates) => {
+    load();
+  }, [userId]);
+
+  const addIdea = useCallback(async (idea) => {
+    if (!userId) return null;
+
+    try {
+      const doc = await databases.createDocument(DATABASE_ID, IDEAS_COLLECTION_ID, ID.unique(), {
+        userId,
+        title: idea.title || '',
+        description: idea.description || '',
+        category: idea.category || 'outro',
+        status: idea.status || 'idea',
+        priority: idea.priority || 'medium',
+        tags: idea.tags || [],
+        notes: idea.notes || '',
+        tasks: JSON.stringify(idea.tasks || []),
+        order: ideas.length,
+      });
+
+      const newIdea = docToIdea(doc);
+      setIdeas(prev => [newIdea, ...prev]);
+      return newIdea;
+    } catch (err) {
+      console.error('Error creating idea:', err);
+      return null;
+    }
+  }, [userId, ideas.length]);
+
+  const updateIdea = useCallback(async (id, updates) => {
     setIdeas(prev => prev.map(idea =>
       idea.id === id
         ? { ...idea, ...updates, updatedAt: new Date().toISOString() }
         : idea
     ));
+
+    const data = {};
+    if (updates.title !== undefined) data.title = updates.title;
+    if (updates.description !== undefined) data.description = updates.description;
+    if (updates.category !== undefined) data.category = updates.category;
+    if (updates.status !== undefined) data.status = updates.status;
+    if (updates.priority !== undefined) data.priority = updates.priority;
+    if (updates.tags !== undefined) data.tags = updates.tags;
+    if (updates.notes !== undefined) data.notes = updates.notes;
+    if (updates.tasks !== undefined) data.tasks = JSON.stringify(updates.tasks);
+    if (updates.order !== undefined) data.order = updates.order;
+
+    try {
+      await databases.updateDocument(DATABASE_ID, IDEAS_COLLECTION_ID, id, data);
+    } catch (err) {
+      console.error('Error updating idea:', err);
+    }
   }, []);
 
-  const deleteIdea = useCallback((id) => {
+  const deleteIdea = useCallback(async (id) => {
     setIdeas(prev => prev.filter(idea => idea.id !== id));
+    try {
+      await databases.deleteDocument(DATABASE_ID, IDEAS_COLLECTION_ID, id);
+    } catch (err) {
+      console.error('Error deleting idea:', err);
+    }
   }, []);
 
-  const reorderIdeas = useCallback((fromIndex, toIndex) => {
-    setIdeas(prev => {
-      const copy = [...prev];
-      const [moved] = copy.splice(fromIndex, 1);
-      copy.splice(toIndex, 0, moved);
-      return copy.map((idea, i) => ({ ...idea, order: i }));
-    });
-  }, []);
+  const toggleTask = useCallback(async (ideaId, taskIndex) => {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
 
-  const toggleTask = useCallback((ideaId, taskIndex) => {
-    setIdeas(prev => prev.map(idea => {
-      if (idea.id !== ideaId) return idea;
-      const tasks = [...idea.tasks];
-      tasks[taskIndex] = { ...tasks[taskIndex], done: !tasks[taskIndex].done };
-      return { ...idea, tasks, updatedAt: new Date().toISOString() };
-    }));
-  }, []);
+    const tasks = [...idea.tasks];
+    tasks[taskIndex] = { ...tasks[taskIndex], done: !tasks[taskIndex].done };
 
-  const addTask = useCallback((ideaId, taskText) => {
-    setIdeas(prev => prev.map(idea => {
-      if (idea.id !== ideaId) return idea;
-      return {
-        ...idea,
-        tasks: [...idea.tasks, { text: taskText, done: false }],
-        updatedAt: new Date().toISOString(),
-      };
-    }));
-  }, []);
+    setIdeas(prev => prev.map(i =>
+      i.id === ideaId ? { ...i, tasks, updatedAt: new Date().toISOString() } : i
+    ));
 
-  const deleteTask = useCallback((ideaId, taskIndex) => {
-    setIdeas(prev => prev.map(idea => {
-      if (idea.id !== ideaId) return idea;
-      const tasks = idea.tasks.filter((_, i) => i !== taskIndex);
-      return { ...idea, tasks, updatedAt: new Date().toISOString() };
-    }));
-  }, []);
+    try {
+      await databases.updateDocument(DATABASE_ID, IDEAS_COLLECTION_ID, ideaId, {
+        tasks: JSON.stringify(tasks),
+      });
+    } catch (err) {
+      console.error('Error toggling task:', err);
+    }
+  }, [ideas]);
 
-  // Filtered + sorted ideas
+  const addTask = useCallback(async (ideaId, taskText) => {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
+
+    const tasks = [...idea.tasks, { text: taskText, done: false }];
+
+    setIdeas(prev => prev.map(i =>
+      i.id === ideaId ? { ...i, tasks, updatedAt: new Date().toISOString() } : i
+    ));
+
+    try {
+      await databases.updateDocument(DATABASE_ID, IDEAS_COLLECTION_ID, ideaId, {
+        tasks: JSON.stringify(tasks),
+      });
+    } catch (err) {
+      console.error('Error adding task:', err);
+    }
+  }, [ideas]);
+
+  const deleteTask = useCallback(async (ideaId, taskIndex) => {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
+
+    const tasks = idea.tasks.filter((_, i) => i !== taskIndex);
+
+    setIdeas(prev => prev.map(i =>
+      i.id === ideaId ? { ...i, tasks, updatedAt: new Date().toISOString() } : i
+    ));
+
+    try {
+      await databases.updateDocument(DATABASE_ID, IDEAS_COLLECTION_ID, ideaId, {
+        tasks: JSON.stringify(tasks),
+      });
+    } catch (err) {
+      console.error('Error deleting task:', err);
+    }
+  }, [ideas]);
+
   const filteredIdeas = ideas
     .filter(idea => {
       if (filter !== 'all' && idea.category !== filter && idea.status !== filter) return false;
@@ -168,12 +226,12 @@ export function useStore() {
     ideas: filteredIdeas,
     allIdeas: ideas,
     stats,
+    loading,
     filter, setFilter,
     search, setSearch,
     sortBy, setSortBy,
-    userName, updateUserName,
     addIdea, updateIdea, deleteIdea,
-    reorderIdeas, toggleTask, addTask, deleteTask,
+    toggleTask, addTask, deleteTask,
     CATEGORIES, STATUSES, PRIORITIES,
   };
 }

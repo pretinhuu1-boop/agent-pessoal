@@ -1,20 +1,29 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Check, Trash2, Download, FileJson, FileSpreadsheet, FileText } from 'lucide-react';
+import { X, Check, Trash2, Download, FileJson, FileSpreadsheet, FileText, LogOut } from 'lucide-react';
 import { clearChatHistory } from '../services/chatService';
 import { exportJSON, exportCSV, exportReport } from '../services/exportService';
-import { getUserName, setUserName } from '../store/useStore';
+import { useAuth } from '../lib/AuthContext';
 
-export default function Settings({ onClose, ideas = [], onNameChange }) {
+export default function Settings({ onClose, ideas = [] }) {
+  const { displayName, updateProfile, signOut, user } = useAuth();
   const [cleared, setCleared] = useState(false);
   const [exported, setExported] = useState(null);
-  const [name, setName] = useState(getUserName());
+  const [name, setName] = useState(displayName);
   const [nameSaved, setNameSaved] = useState(false);
 
   const handleClearChat = () => {
     clearChatHistory();
     setCleared(true);
     setTimeout(() => setCleared(false), 2000);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = name.trim() || 'Netto';
+    setName(trimmed);
+    await updateProfile({ display_name: trimmed });
+    setNameSaved(true);
+    setTimeout(() => setNameSaved(false), 2000);
   };
 
   return (
@@ -46,6 +55,15 @@ export default function Settings({ onClose, ideas = [], onNameChange }) {
           </div>
 
           <div className="px-4 pb-6 space-y-4" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 20px), 20px)' }}>
+            {/* User Info */}
+            <div className="bg-white/3 rounded-xl border border-border p-3">
+              <div className="text-[11px] text-text-secondary font-medium uppercase tracking-wider mb-1">
+                Conta
+              </div>
+              <div className="text-[14px] text-text-primary font-medium">{displayName}</div>
+              <div className="text-[11px] text-text-tertiary">{user?.email}</div>
+            </div>
+
             {/* User Name */}
             <div>
               <label className="text-[11px] text-text-secondary mb-1.5 block font-medium uppercase tracking-wider">
@@ -60,14 +78,7 @@ export default function Settings({ onClose, ideas = [], onNameChange }) {
                   className="flex-1 bg-white/4 border border-border rounded-xl py-2.5 px-3 text-[14px] text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/30 transition-colors"
                 />
                 <button
-                  onClick={() => {
-                    const trimmed = name.trim() || 'Netto';
-                    setUserName(trimmed);
-                    setName(trimmed);
-                    if (onNameChange) onNameChange(trimmed);
-                    setNameSaved(true);
-                    setTimeout(() => setNameSaved(false), 2000);
-                  }}
+                  onClick={handleSaveName}
                   className={`px-4 rounded-xl text-[13px] font-medium transition-all duration-200 press-scale ${
                     nameSaved
                       ? 'bg-status-done/15 text-status-done'
@@ -154,6 +165,15 @@ export default function Settings({ onClose, ideas = [], onNameChange }) {
               ) : (
                 <><Trash2 size={14} /> Limpar historico do chat</>
               )}
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={signOut}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] rounded-xl border border-border bg-white/3 text-text-secondary press-scale transition-all hover:bg-white/5 hover:text-text-primary"
+            >
+              <LogOut size={14} />
+              Sair da conta
             </button>
           </div>
         </div>

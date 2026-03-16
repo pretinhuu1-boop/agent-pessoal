@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Agente Netto</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0c;
+      color: #e5e5e5;
+      min-height: 100dvh;
+    }
+
+    /* Login */
+    .login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 24px;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+    .login-box h1 {
+      font-size: 20px;
+      margin-bottom: 6px;
+      color: #d4a243;
+    }
+    .login-box p {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 24px;
+    }
+    .login-box input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #2a2a2e;
+      border-radius: 12px;
+      background: #141416;
+      color: #e5e5e5;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    .login-box input:focus { border-color: #d4a243; }
+    .login-box button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      background: #d4a243;
+      color: #0a0a0c;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .login-box button:hover { filter: brightness(1.1); }
+    .login-box button:disabled { opacity: 0.5; cursor: wait; }
+    .error-msg {
+      color: #ff4444;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    /* Dashboard */
+    .dashboard { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .dashboard.active { display: block; }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .top-bar h1 { font-size: 18px; color: #d4a243; }
+    .stats {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: #888;
+    }
+    .stats span { display: flex; align-items: center; gap: 4px; }
+    .stats .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .btn-logout {
+      padding: 6px 14px;
+      border: 1px solid #2a2a2e;
+      border-radius: 8px;
+      background: transparent;
+      color: #888;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn-logout:hover { color: #ff4444; border-color: #ff4444; }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .filters input {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 14px;
+      border: 1px solid #2a2a2e;
+      border-radius: 8px;
+      background: #141416;
+      color: #e5e5e5;
+      font-size: 13px;
+      outline: none;
+    }
+    .filters select {
+      padding: 8px 12px;
+      border: 1px solid #2a2a2e;
+      border-radius: 8px;
+      background: #141416;
+      color: #e5e5e5;
+      font-size: 13px;
+      outline: none;
+    }
+
+    /* Ideas grid */
+    .ideas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 12px;
+    }
+
+    .idea-card {
+      background: #141416;
+      border: 1px solid #2a2a2e;
+      border-radius: 14px;
+      padding: 16px;
+      transition: border-color 0.2s;
+    }
+    .idea-card:hover { border-color: #3a3a3e; }
+
+    .idea-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .idea-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f0f0f0;
+      line-height: 1.3;
+    }
+    .idea-user {
+      font-size: 10px;
+      color: #666;
+      background: #1a1a1e;
+      padding: 2px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      font-family: monospace;
+    }
+    .idea-desc {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 10px;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .idea-meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .badge-status-idea { background: #bf5af220; color: #bf5af2; }
+    .badge-status-progress { background: #0a84ff20; color: #0a84ff; }
+    .badge-status-done { background: #30d15820; color: #30d158; }
+    .badge-status-paused { background: #63636620; color: #636366; }
+    .badge-priority-high { background: #ff375f20; color: #ff375f; }
+    .badge-priority-medium { background: #ff9f0a20; color: #ff9f0a; }
+    .badge-priority-low { background: #30d15820; color: #30d158; }
+    .badge-category { background: #d4a24315; color: #d4a243; }
+
+    .idea-tags {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .tag {
+      font-size: 10px;
+      color: #666;
+      background: #1a1a1e;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .idea-tasks {
+      font-size: 11px;
+      color: #888;
+      margin-top: 6px;
+      border-top: 1px solid #1e1e22;
+      padding-top: 8px;
+    }
+    .task-item { padding: 2px 0; }
+    .task-done { text-decoration: line-through; color: #555; }
+
+    .idea-date {
+      font-size: 10px;
+      color: #555;
+      margin-top: 8px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #555;
+      font-size: 14px;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+
+    @media (max-width: 640px) {
+      .ideas-grid { grid-template-columns: 1fr; }
+      .dashboard { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-box">
+      <h1>🔒 Admin — Agente Netto</h1>
+      <p>Painel de visualizacao de ideias dos usuarios</p>
+      <form id="loginForm">
+        <input type="password" id="passwordInput" placeholder="Senha do admin" autocomplete="off" required>
+        <button type="submit" id="loginBtn">Entrar</button>
+      </form>
+      <p class="error-msg" id="loginError"></p>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard" id="dashboard">
+    <div class="top-bar">
+      <h1>📊 Painel Admin</h1>
+      <div class="stats" id="stats"></div>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+
+    <div class="filters">
+      <input type="text" id="searchInput" placeholder="Buscar por titulo, descricao, tags...">
+      <select id="statusFilter">
+        <option value="">Todos status</option>
+        <option value="idea">💡 Ideia</option>
+        <option value="progress">🔵 Em andamento</option>
+        <option value="done">✅ Concluido</option>
+        <option value="paused">⏸️ Pausado</option>
+      </select>
+      <select id="userFilter">
+        <option value="">Todos usuarios</option>
+      </select>
+    </div>
+
+    <div id="content">
+      <div class="loading">Carregando...</div>
+    </div>
+  </div>
+
+<script>
+  const STATUS_LABELS = { idea: 'Ideia', progress: 'Em andamento', done: 'Concluido', paused: 'Pausado' };
+  const PRIORITY_LABELS = { high: 'Alta', medium: 'Media', low: 'Baixa' };
+  const CATEGORY_LABELS = {
+    marketing: '📣 Marketing', vendas: '💰 Vendas', conteudo: '🎬 Conteudo',
+    produto: '📦 Produto', estrategia: '🎯 Estrategia', networking: '🤝 Networking', outro: '💡 Outro',
+  };
+
+  let allIdeas = [];
+
+  // --- Helpers: safe DOM creation ---
+  function el(tag, classes, textContent) {
+    const node = document.createElement(tag);
+    if (classes) node.className = classes;
+    if (textContent) node.textContent = textContent;
+    return node;
+  }
+
+  function createStatSpan(color, text) {
+    const span = el('span');
+    const dot = el('span', 'dot');
+    dot.style.background = color;
+    span.appendChild(dot);
+    span.appendChild(document.createTextNode(text));
+    return span;
+  }
+
+  // --- Login ---
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    const errEl = document.getElementById('loginError');
+    const pw = document.getElementById('passwordInput').value;
+
+    btn.disabled = true;
+    errEl.textContent = '';
+
+    try {
+      const res = await fetch('/api/admin/ideas', {
+        headers: { 'X-Admin-Password': pw },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ' + res.status);
+      }
+
+      const data = await res.json();
+      allIdeas = data.ideas;
+
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('dashboard').classList.add('active');
+      populateFilters();
+      renderDashboard();
+
+    } catch (err) {
+      errEl.textContent = err.message;
+    }
+
+    btn.disabled = false;
+  });
+
+  function logout() {
+    allIdeas = [];
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('dashboard').classList.remove('active');
+    document.getElementById('passwordInput').value = '';
+  }
+
+  // --- Filters ---
+  function populateFilters() {
+    const userIds = [...new Set(allIdeas.map(i => i.userId))];
+    const select = document.getElementById('userFilter');
+    // Clear and re-add default option
+    while (select.firstChild) select.removeChild(select.firstChild);
+    const defaultOpt = el('option', '', 'Todos usuarios (' + userIds.length + ')');
+    defaultOpt.value = '';
+    select.appendChild(defaultOpt);
+
+    userIds.forEach(uid => {
+      const count = allIdeas.filter(i => i.userId === uid).length;
+      const opt = el('option', '', uid.substring(0, 8) + '... (' + count + ' ideias)');
+      opt.value = uid;
+      select.appendChild(opt);
+    });
+  }
+
+  document.getElementById('searchInput').addEventListener('input', renderDashboard);
+  document.getElementById('statusFilter').addEventListener('change', renderDashboard);
+  document.getElementById('userFilter').addEventListener('change', renderDashboard);
+
+  // --- Render ---
+  function renderDashboard() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const userFilter = document.getElementById('userFilter').value;
+
+    const filtered = allIdeas.filter(idea => {
+      if (statusFilter && idea.status !== statusFilter) return false;
+      if (userFilter && idea.userId !== userFilter) return false;
+      if (query) {
+        const searchable = [idea.title, idea.description, ...idea.tags, idea.notes].join(' ').toLowerCase();
+        if (!searchable.includes(query)) return false;
+      }
+      return true;
+    });
+
+    // Stats (safe DOM)
+    const statsEl = document.getElementById('stats');
+    while (statsEl.firstChild) statsEl.removeChild(statsEl.firstChild);
+    statsEl.appendChild(createStatSpan('#bf5af2', filtered.filter(i => i.status === 'idea').length + ' ideias'));
+    statsEl.appendChild(createStatSpan('#0a84ff', filtered.filter(i => i.status === 'progress').length + ' andamento'));
+    statsEl.appendChild(createStatSpan('#30d158', filtered.filter(i => i.status === 'done').length + ' feitas'));
+    statsEl.appendChild(el('span', '', 'Total: ' + filtered.length + '/' + allIdeas.length));
+
+    // Content
+    const content = document.getElementById('content');
+    while (content.firstChild) content.removeChild(content.firstChild);
+
+    if (filtered.length === 0) {
+      content.appendChild(el('div', 'empty', 'Nenhuma ideia encontrada'));
+      return;
+    }
+
+    const grid = el('div', 'ideas-grid');
+
+    filtered.forEach(idea => {
+      const card = el('div', 'idea-card');
+
+      // Header
+      const header = el('div', 'idea-header');
+      header.appendChild(el('span', 'idea-title', idea.title || 'Sem titulo'));
+      header.appendChild(el('span', 'idea-user', idea.userId.substring(0, 8)));
+      card.appendChild(header);
+
+      // Description
+      if (idea.description) {
+        card.appendChild(el('div', 'idea-desc', idea.description));
+      }
+
+      // Meta badges
+      const meta = el('div', 'idea-meta');
+      meta.appendChild(el('span', 'badge badge-status-' + idea.status, STATUS_LABELS[idea.status] || idea.status));
+      meta.appendChild(el('span', 'badge badge-priority-' + idea.priority, PRIORITY_LABELS[idea.priority] || idea.priority));
+      meta.appendChild(el('span', 'badge badge-category', CATEGORY_LABELS[idea.category] || idea.category));
+      card.appendChild(meta);
+
+      // Tags
+      if (idea.tags && idea.tags.length > 0) {
+        const tagsDiv = el('div', 'idea-tags');
+        idea.tags.forEach(t => tagsDiv.appendChild(el('span', 'tag', '#' + t)));
+        card.appendChild(tagsDiv);
+      }
+
+      // Tasks
+      if (idea.tasks && idea.tasks.length > 0) {
+        const tasksDiv = el('div', 'idea-tasks');
+        idea.tasks.forEach(t => {
+          const item = el('div', 'task-item' + (t.done ? ' task-done' : ''), (t.done ? '✅ ' : '⬜ ') + t.text);
+          tasksDiv.appendChild(item);
+        });
+        card.appendChild(tasksDiv);
+      }
+
+      // Date
+      const date = new Date(idea.createdAt).toLocaleDateString('pt-BR', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      });
+      card.appendChild(el('div', 'idea-date', '📅 ' + date));
+
+      grid.appendChild(card);
+    });
+
+    content.appendChild(grid);
+  }
+</script>
+</body>
+</html>

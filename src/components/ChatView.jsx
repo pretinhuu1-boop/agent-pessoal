@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Send, Settings as SettingsIcon, Sparkles, Loader2, RotateCcw, Mic, MicOff } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useAuth } from '../lib/AuthContext';
 import { streamChat, loadChatHistory, saveChatHistory, clearChatHistory } from '../services/chatService';
 import ChatMessage from './ChatMessage';
 import Settings from './Settings';
@@ -15,8 +15,8 @@ const SUGGESTIONS = [
   { text: 'Crie 3 ideias de conteudo', icon: '🎬' },
 ];
 
-export default function ChatView({ userName = 'Netto' }) {
-  const store = useStore();
+export default function ChatView({ store }) {
+  const { displayName } = useAuth();
   const [messages, setMessages] = useState(() => loadChatHistory());
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -240,7 +240,7 @@ export default function ChatView({ userName = 'Netto' }) {
               )}
             </div>
             <div>
-              <div className="text-[14px] font-semibold text-text-primary leading-tight">Agente {userName}</div>
+              <div className="text-[14px] font-semibold text-text-primary leading-tight">Agente {displayName}</div>
               <div className="text-[11px] leading-tight">
                 {isStreaming ? (
                   <span className="text-accent flex items-center gap-1">
@@ -283,7 +283,7 @@ export default function ChatView({ userName = 'Netto' }) {
               <Sparkles size={28} className="text-accent" />
             </div>
             <h3 className="text-[18px] font-bold text-gradient mb-1" style={{ fontFamily: 'var(--font-display)' }}>
-              {greeting}, {userName}!
+              {greeting}, {displayName}!
             </h3>
             <p className="text-[13px] text-text-secondary leading-relaxed mb-6 max-w-[280px]">
               Seu time de agentes de IA esta pronto para ajudar com marketing, vendas e estrategia.
@@ -407,7 +407,7 @@ export default function ChatView({ userName = 'Netto' }) {
 
       {/* Settings Sheet */}
       <AnimatePresence>
-        {showSettings && <Settings onClose={() => setShowSettings(false)} ideas={store.allIdeas} onNameChange={store.updateUserName} />}
+        {showSettings && <Settings onClose={() => setShowSettings(false)} ideas={store.allIdeas} />}
       </AnimatePresence>
     </div>
   );

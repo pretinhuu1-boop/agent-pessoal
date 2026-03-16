@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Lightbulb, MessageCircle, Plus, Settings as SettingsIcon, TrendingUp, Download } from 'lucide-react';
+import { Lightbulb, MessageCircle, Plus, Settings as SettingsIcon, TrendingUp, Download, Loader2 } from 'lucide-react';
+import { useAuth } from './lib/AuthContext';
 import { useStore } from './store/useStore';
+import AuthScreen from './components/AuthScreen';
 import Header from './components/Header';
 import IdeaCard from './components/IdeaCard';
 import IdeaSheet from './components/IdeaSheet';
@@ -12,7 +14,8 @@ import { exportJSON, exportCSV, exportReport } from './services/exportService';
 import InstallBanner from './components/InstallBanner';
 
 function App() {
-  const store = useStore();
+  const { user, displayName, loading: authLoading, signOut } = useAuth();
+  const store = useStore(user?.$id);
   const [activeTab, setActiveTab] = useState('ideas');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingIdea, setEditingIdea] = useState(null);
@@ -52,6 +55,20 @@ function App() {
 
   const completionRate = store.stats.total > 0 ? Math.round((store.stats.done / store.stats.total) * 100) : 0;
 
+  // Auth loading
+  if (authLoading) {
+    return (
+      <div className="h-[100dvh] bg-surface flex items-center justify-center">
+        <Loader2 size={28} className="text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  // Not logged in
+  if (!user) {
+    return <AuthScreen />;
+  }
+
   return (
     <div className="h-[100dvh] bg-surface relative flex flex-col lg:flex-row overflow-hidden">
 
@@ -61,7 +78,7 @@ function App() {
         <div className="px-5 pt-6 pb-4 desktop-titlebar">
           <h1 className="text-[18px] font-bold text-gradient leading-tight mb-0.5"
             style={{ fontFamily: 'var(--font-display)' }}>
-            Agente {store.userName}
+            Agente {displayName}
           </h1>
           <p className="text-[11px] text-text-tertiary">Suas ideias, organizadas</p>
         </div>
@@ -187,7 +204,7 @@ function App() {
                   setSortBy={store.setSortBy}
                   CATEGORIES={store.CATEGORIES}
                   STATUSES={store.STATUSES}
-                  userName={store.userName}
+                  userName={displayName}
                 />
               </div>
 
@@ -262,7 +279,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <ChatView userName={store.userName} />
+            <ChatView store={store} />
           )}
         </div>
 

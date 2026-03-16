@@ -4,9 +4,11 @@ import {
   X, Trash2, Check, Plus,
   CheckCircle2, Circle,
   ListTodo, Sparkles, StickyNote,
-  Share2, MessageCircle, Copy, ExternalLink
+  Share2, MessageCircle, Copy, ExternalLink,
+  Brain, Loader2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { shareIdea, shareToWhatsApp, copyIdeaText, shareToSocial } from '../services/shareService';
+import { analyzeIdea, AGENT_MAP, POTENCIAL_MAP } from '../services/ideaAnalyzer';
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(
@@ -40,24 +42,45 @@ export default function IdeaSheet({
   const [showShare, setShowShare] = useState(false);
   const [shareStatus, setShareStatus] = useState(null); // 'copied' | 'shared'
   const [activeTab, setActiveTab] = useState('info');
+  const [shareTemplate, setShareTemplate] = useState('pessoal'); // 'pessoal' | 'proposta'
+  const [proposalIncludeTasks, setProposalIncludeTasks] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(true);
   const titleRef = useRef(null);
 
   const handleShare = async (method) => {
     const ideaData = isNew ? form : { ...idea, ...form };
+    const tplOptions = shareTemplate === 'proposta' ? { includeTasks: proposalIncludeTasks } : {};
     if (method === 'native') {
-      const result = await shareIdea(ideaData);
+      const result = await shareIdea(ideaData, shareTemplate, tplOptions);
       if (result.success) { setShareStatus('shared'); setTimeout(() => setShareStatus(null), 2500); }
     } else if (method === 'whatsapp') {
-      shareToWhatsApp(ideaData);
+      shareToWhatsApp(ideaData, '', shareTemplate, tplOptions);
       setShareStatus('shared'); setTimeout(() => setShareStatus(null), 2500);
     } else if (method === 'copy') {
-      await copyIdeaText(ideaData);
+      await copyIdeaText(ideaData, shareTemplate, tplOptions);
       setShareStatus('copied'); setTimeout(() => setShareStatus(null), 2500);
     } else if (['tiktok', 'instagram', 'youtube'].includes(method)) {
       await shareToSocial(ideaData, method);
       setShareStatus(method); setTimeout(() => setShareStatus(null), 3000);
     }
     setShowShare(false);
+  };
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    setAnalysisError(null);
+    try {
+      const ideaData = isNew ? form : { ...idea, ...form };
+      const result = await analyzeIdea(ideaData);
+      setAnalysis(result);
+      setShowAnalysis(true);
+    } catch (err) {
+      setAnalysisError('Erro ao analisar. Tente novamente.');
+    }
+    setAnalyzing(false);
   };
 
   useEffect(() => {
@@ -243,12 +266,190 @@ export default function IdeaSheet({
               </div>
             </div>
 
+            {/* AI Analysis */}
+            {form.title?.trim() && (
+              <div className="mb-4">
+                <SectionLabel>Analise IA</SectionLabel>
+                {!analysis && !analyzing && (
+                  <button
+                    onClick={handleAnalyze}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-accent/20 bg-accent/6 text-accent text-[13px] font-medium press-scale hover:bg-accent/10 transition-colors"
+                  >
+                    <Brain size={16} />
+                    Analisar ideia com IA
+                  </button>
+                )}
+
+                {analyzing && (
+                  <div className="flex items-center justify-center gap-2 py-4 text-accent text-[13px]">
+                    <Loader2 size={16} className="animate-spin" />
+                    Analisando...
+                  </div>
+                )}
+
+                {analysisError && (
+                  <div className="text-[12px] text-red-400 text-center py-2 mb-2">{analysisError}</div>
+                )}
+
+                {analysis && (
+                  <div className="space-y-2">
+                    {/* Header com score */}
+                    <button
+                      onClick={() => setShowAnalysis(prev => !prev)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/4 border border-border"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] font-bold ${
+                          analysis.score >= 70 ? 'bg-green-500/15 text-green-400' :
+                          analysis.score >= 40 ? 'bg-yellow-500/15 text-yellow-400' :
+                          'bg-red-500/15 text-red-400'
+                        }`}>
+                          {analysis.score}
+                        </div>
+                        <div className="text-left">
+                          <div className="text-[12px] font-semibold text-text-primary">{analysis.veredicto}</div>
+                          <div className="text-[10px] text-text-tertiary flex items-center gap-2">
+                            <span>{POTENCIAL_MAP[analysis.potencial_mercado]?.emoji} {analysis.potencial_mercado}</span>
+                            <span>· {analysis.complexidade}</span>
+                            <span>· {analysis.tempo_estimado}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {showAnalysis ? <ChevronUp size={14} className="text-text-tertiary" /> : <ChevronDown size={14} className="text-text-tertiary" />}
+                    </button>
+
+                    {showAnalysis && (
+                      <div className="space-y-2 animate-in fade-in">
+                        {/* Agentes recomendados */}
+                        {analysis.agentes_recomendados?.length > 0 && (
+                          <div className="px-3 py-2 rounded-xl bg-white/3 border border-border">
+                            <div className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1.5">Agentes recomendados</div>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {analysis.agentes_recomendados.map(agent => {
+                                const a = AGENT_MAP[agent];
+                                return a ? (
+                                  <span key={agent} className="text-[10px] px-2 py-0.5 rounded-full border" style={{ borderColor: `${a.color}30`, background: `${a.color}10`, color: a.color }}>
+                                    {a.emoji} {a.label}
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pontos fortes */}
+                        {analysis.pontos_fortes?.length > 0 && (
+                          <div className="px-3 py-2 rounded-xl bg-green-500/5 border border-green-500/10">
+                            <div className="text-[10px] text-green-400 uppercase tracking-wider mb-1">Pontos fortes</div>
+                            {analysis.pontos_fortes.map((p, i) => (
+                              <div key={i} className="text-[11px] text-text-secondary flex gap-1.5 py-0.5">
+                                <span className="text-green-400 shrink-0">✓</span> {p}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Pontos fracos */}
+                        {analysis.pontos_fracos?.length > 0 && (
+                          <div className="px-3 py-2 rounded-xl bg-red-500/5 border border-red-500/10">
+                            <div className="text-[10px] text-red-400 uppercase tracking-wider mb-1">Pontos fracos</div>
+                            {analysis.pontos_fracos.map((p, i) => (
+                              <div key={i} className="text-[11px] text-text-secondary flex gap-1.5 py-0.5">
+                                <span className="text-red-400 shrink-0">✗</span> {p}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Sugestoes */}
+                        {analysis.sugestoes?.length > 0 && (
+                          <div className="px-3 py-2 rounded-xl bg-accent/5 border border-accent/10">
+                            <div className="text-[10px] text-accent uppercase tracking-wider mb-1">Sugestoes</div>
+                            {analysis.sugestoes.map((s, i) => (
+                              <div key={i} className="text-[11px] text-text-secondary flex gap-1.5 py-0.5">
+                                <span className="text-accent shrink-0">→</span> {s}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Proximos passos */}
+                        {analysis.proximos_passos?.length > 0 && (
+                          <div className="px-3 py-2 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                            <div className="text-[10px] text-blue-400 uppercase tracking-wider mb-1">Proximos passos</div>
+                            {analysis.proximos_passos.map((p, i) => (
+                              <div key={i} className="text-[11px] text-text-secondary flex gap-1.5 py-0.5">
+                                <span className="text-blue-400 shrink-0">{i + 1}.</span> {p}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Re-analisar */}
+                        <button
+                          onClick={handleAnalyze}
+                          className="w-full text-[11px] text-text-tertiary py-1.5 hover:text-accent transition-colors"
+                        >
+                          Analisar novamente
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Share */}
             {form.title?.trim() && (
               <div>
+                <SectionLabel>Modelo de envio</SectionLabel>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button
+                    onClick={() => setShareTemplate('pessoal')}
+                    className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border transition-all duration-200 ${
+                      shareTemplate === 'pessoal'
+                        ? 'border-accent/40 bg-accent/10'
+                        : 'border-border bg-white/3 hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-[18px]">😊</span>
+                    <span className={`text-[12px] font-semibold ${shareTemplate === 'pessoal' ? 'text-accent' : 'text-text-primary'}`}>Pessoal</span>
+                    <span className="text-[9px] text-text-tertiary text-center leading-tight">Emojis, tudo incluso, notas e tarefas</span>
+                  </button>
+                  <button
+                    onClick={() => setShareTemplate('proposta')}
+                    className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border transition-all duration-200 ${
+                      shareTemplate === 'proposta'
+                        ? 'border-accent/40 bg-accent/10'
+                        : 'border-border bg-white/3 hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-[18px]">💼</span>
+                    <span className={`text-[12px] font-semibold ${shareTemplate === 'proposta' ? 'text-accent' : 'text-text-primary'}`}>Proposta</span>
+                    <span className="text-[9px] text-text-tertiary text-center leading-tight">Profissional, CTA de venda, direto</span>
+                  </button>
+                </div>
+
+                {/* Opcao de incluir tarefas no modelo proposta */}
+                {shareTemplate === 'proposta' && (idea?.tasks?.length > 0 || form.tasks?.length > 0) && (
+                  <button
+                    onClick={() => setProposalIncludeTasks(prev => !prev)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 mb-3 rounded-xl text-[12px] border transition-all duration-200 ${
+                      proposalIncludeTasks
+                        ? 'border-accent/25 bg-accent/6 text-text-primary'
+                        : 'border-border bg-white/3 text-text-secondary'
+                    }`}
+                  >
+                    {proposalIncludeTasks
+                      ? <CheckCircle2 size={15} className="text-accent shrink-0" />
+                      : <Circle size={15} className="text-text-tertiary shrink-0" />
+                    }
+                    Incluir lista de entregas (tarefas)
+                  </button>
+                )}
+
                 <SectionLabel>Compartilhar</SectionLabel>
                 <div className="grid grid-cols-3 gap-2 mb-3">
-                  {/* WhatsApp */}
                   <ShareButton
                     onClick={() => handleShare('whatsapp')}
                     icon={<MessageCircle size={18} />}
@@ -256,7 +457,6 @@ export default function IdeaSheet({
                     color="#25D366"
                     active={shareStatus === 'shared'}
                   />
-                  {/* Enviar nativo */}
                   <ShareButton
                     onClick={() => handleShare('native')}
                     icon={<Share2 size={18} />}
@@ -264,7 +464,6 @@ export default function IdeaSheet({
                     color="#d4a243"
                     active={shareStatus === 'shared'}
                   />
-                  {/* Copiar */}
                   <ShareButton
                     onClick={() => handleShare('copy')}
                     icon={<Copy size={18} />}
@@ -278,7 +477,6 @@ export default function IdeaSheet({
                 <SectionLabel>Postar nas Redes</SectionLabel>
                 <p className="text-[10px] text-text-tertiary mb-2 -mt-0.5">Caption otimizada copiada automaticamente</p>
                 <div className="grid grid-cols-3 gap-2">
-                  {/* TikTok */}
                   <ShareButton
                     onClick={() => handleShare('tiktok')}
                     icon={<TikTokIcon />}
@@ -287,7 +485,6 @@ export default function IdeaSheet({
                     active={shareStatus === 'tiktok'}
                     activeLabel="Copiado!"
                   />
-                  {/* Instagram */}
                   <ShareButton
                     onClick={() => handleShare('instagram')}
                     icon={<InstagramIcon />}
@@ -296,7 +493,6 @@ export default function IdeaSheet({
                     active={shareStatus === 'instagram'}
                     activeLabel="Copiado!"
                   />
-                  {/* YouTube Shorts */}
                   <ShareButton
                     onClick={() => handleShare('youtube')}
                     icon={<YouTubeIcon />}

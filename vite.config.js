@@ -16,10 +16,10 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Cache API calls to Anthropic (optional — caches tool responses)
-            urlPattern: /^https:\/\/api\.anthropic\.com\/.*/i,
+            urlPattern: /^https:\/\/api\.groq\.com\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'anthropic-api',
+              cacheName: 'groq-api',
               expiration: { maxEntries: 20, maxAgeSeconds: 60 * 5 },
               cacheableResponse: { statuses: [0, 200] },
             },
@@ -31,5 +31,11 @@ export default defineConfig({
   server: {
     port: 5180,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'https://ajudante-do-netto.vercel.app',
+        changeOrigin: true,
+      },
+    },
   },
 })
